@@ -2,7 +2,6 @@ package com.justweb.app
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
@@ -16,7 +15,6 @@ import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.webkit.WebViewClientCompat
 
 class MainActivity : AppCompatActivity() {
 
@@ -41,7 +39,7 @@ class MainActivity : AppCompatActivity() {
                 allowContentAccess = true
                 allowFileAccess = true
             }
-            webViewClient = object : WebViewClientCompat() {
+            webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                     val url = request?.url?.toString() ?: return false
                     if (url.startsWith("http://") || url.startsWith("https://")) {
@@ -66,7 +64,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             webChromeClient = object : WebChromeClient() {
-                override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+                override fun onShowCustomView(view: View?, callback: WebChromeClient.CustomViewCallback?) {
                     super.onShowCustomView(view, callback)
                     if (view is FrameLayout) {
                         setFullscreen(true)
@@ -89,7 +87,7 @@ class MainActivity : AppCompatActivity() {
             webView.loadUrl(url)
         }
 
-        window.decorView.setSystemU visibility(
+        window.decorView.systemUiVisibility = (
             View.SYSTEM_UI_FLAG_FULLSCREEN or
             View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
             View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
@@ -168,35 +166,41 @@ class MainActivity : AppCompatActivity() {
                 </style>
             </head>
             <body>
-                <h1>Hermit</h1>
+                <h1>JustWeb</h1>
                 <p>网页转应用，一键添加到桌面</p>
                 <div class="form">
                     <input type="url" id="url" placeholder="输入网址，如 https://example.com">
-                    <button onclick="openUrl()">添加到桌面</button>
+                    <button onclick="go()">添加到桌面</button>
                 </div>
                 <div class="recent" id="recent"></div>
                 <script>
-                    const recent = JSON.parse(localStorage.getItem('justweb_recent') || '[]');
-                    if (recent.length) {
-                        document.getElementById('recent').innerHTML = '<h3>最近打开</h3>' +
-                            recent.map(r => '<div class="recent-item" onclick="location.href=\''+r.url+'\'">'+r.title+'</div>').join('');
-                    }
-                    function openUrl() {
-                        let url = document.getElementById('url').value.trim();
+                    function go() {
+                        var url = document.getElementById('url').value.trim();
                         if (!url) return;
                         if (!url.startsWith('http://') && !url.startsWith('https://')) {
                             url = 'https://' + url;
                         }
-                        const title = new URL(url).hostname;
-                        const rec = JSON.parse(localStorage.getItem('justweb_recent') || '[]');
-                        const newRec = [{title, url, time: Date.now()}, ...rec.filter(r => r.url !== url)].slice(0, 10);
-                        localStorage.setItem('justweb_recent', JSON.stringify(newRec));
-                        
-                        // Use intent to create shortcut
-                        const intent = new android.content.Intent(android.app.ActivityThread.currentApplication(), 'com.justweb.app.ShortcutActivity');
-                        intent.putExtra('url', url);
-                        intent.putExtra('title', title);
-                        startActivity(intent);
+                        try {
+                            var hostname = new URL(url).hostname;
+                            var title = hostname;
+                            var rec = JSON.parse(localStorage.getItem('justweb_recent') || '[]');
+                            var newRec = [{title: title, url: url, time: Date.now()}, ...rec.filter(function(r) { return r.url !== url; })].slice(0, 10);
+                            localStorage.setItem('justweb_recent', JSON.stringify(newRec));
+                            
+                            // Use Android intent
+                            var intent = new WebKitIntent('android.intent.action.MAIN');
+                        } catch(e) {
+                            alert('请输入有效网址');
+                        }
+                        alert('请在浏览器中打开此页面后，添加到主屏幕');
+                    }
+                    
+                    var recent = JSON.parse(localStorage.getItem('justweb_recent') || '[]');
+                    if (recent.length) {
+                        document.getElementById('recent').innerHTML = '<h3>最近打开</h3>' +
+                            recent.map(function(r) { 
+                                return '<div class="recent-item" onclick="location.href=\''+r.url+'\'">'+r.title+'</div>'; 
+                            }).join('');
                     }
                 </script>
             </body>
@@ -204,7 +208,6 @@ class MainActivity : AppCompatActivity() {
             """,
             "text/html",
             "UTF-8",
-            null,
             null
         )
     }
@@ -212,12 +215,10 @@ class MainActivity : AppCompatActivity() {
     private fun setFullscreen(enabled: Boolean) {
         isFullscreen = enabled
         if (enabled) {
-            window.insetsController?.hide(WindowInsets.Type.statusBar() or WindowInsets.Type.navigationBars())
+            window.insetsController?.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
             window.insetsController?.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         } else {
-            window.insetsController?.show(WindowInsets.Type.statusBar() or WindowInsets.Type.navigationBars())
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            window.insetsController?.show(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
         }
     }
 
@@ -226,11 +227,12 @@ class MainActivity : AppCompatActivity() {
         supportActionBar?.hide()
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (webView.canGoBack()) {
             webView.goBack()
         } else {
-            finish()
+            super.onBackPressed()
         }
     }
 }

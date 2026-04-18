@@ -5,13 +5,8 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
-import android.view.View
-import android.view.ViewGroup
-import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
 class ShortcutActivity : AppCompatActivity() {
@@ -19,42 +14,18 @@ class ShortcutActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val url = intent?.getStringExtra("url") ?: run {
+        val url = intent?.getStringExtra("url")
+        val title = intent?.getStringExtra("title")
+
+        if (url.isNullOrEmpty()) {
+            Toast.makeText(this, "无效的网址", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
-        val title = intent?.getStringExtra("title") ?: "App"
 
-        setContentView(LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(48, 48, 48, 48)
-            setBackgroundColor(Color.parseColor("#1a1a2e"))
-
-            addView(TextView(this@ShortcutActivity).apply {
-                text = "创建快捷方式"
-                textSize = 24f
-                setTextColor(Color.WHITE)
-            })
-
-            addView(TextView(this@ShortcutActivity).apply {
-                text = url
-                textSize = 14f
-                setTextColor(Color.GRAY)
-                setPadding(0, 16, 0, 48)
-            })
-
-            addView(TextView(this@ShortcutActivity).apply {
-                text = "添加到主屏幕"
-                setTextColor(Color.WHITE)
-                textSize = 18f
-                setBackgroundColor(Color.parseColor("#e94560"))
-                setPadding(48, 24, 48, 24)
-                setCompoundDrawables(null, null, null, null)
-                setOnClickListener {
-                    createShortcut(url, title)
-                }
-            })
-        })
+        createShortcut(url, title ?: "JustWeb App")
+        Toast.makeText(this, "已添加到主屏幕", Toast.LENGTH_SHORT).show()
+        finish()
     }
 
     private fun createShortcut(url: String, title: String) {
@@ -71,7 +42,6 @@ class ShortcutActivity : AppCompatActivity() {
         }
 
         sendBroadcast(addShortcutIntent)
-        finish()
     }
 
     private fun generateIcon(text: String): Bitmap {
