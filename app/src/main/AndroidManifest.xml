@@ -9,14 +9,14 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Hermit">
+        android:theme="@style/Theme.JustWeb">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
             android:configChanges="orientation|screenSize|keyboardHidden"
-            android:theme="@style/Theme.Hermit">
+            android:theme="@style/Theme.JustWeb">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -33,7 +33,7 @@
         <activity
             android:name=".ShortcutActivity"
             android:exported="true"
-            android:theme="@style/Theme.Hermit.Dialog">
+            android:theme="@style/Theme.JustWeb.Dialog">
             <intent-filter>
                 <action android:name="com.android.launcher.action.INSTALL_SHORTCUT" />
             </intent-filter>

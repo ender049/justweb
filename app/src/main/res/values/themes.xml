@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Hermit" parent="Theme.Material3.Dark.NoActionBar">
+    <style name="Theme.JustWeb" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">#e94560</item>
         <item name="colorOnPrimary">#fff</item>
         <item name="colorSurface">#1a1a2e</item>
@@ -8,7 +8,7 @@
         <item name="android:windowFullscreen">true</item>
     </style>
     
-    <style name="Theme.Hermit.Dialog" parent="Theme.Material3.Dark.Dialog">
+    <style name="Theme.JustWeb.Dialog" parent="Theme.MaterialComponents.Dialog">
         <item name="colorPrimary">#e94560</item>
     </style>
 </resources>
