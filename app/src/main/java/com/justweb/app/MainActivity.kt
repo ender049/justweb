@@ -39,6 +39,8 @@ class MainActivity : AppCompatActivity() {
                 mediaPlaybackRequiresUserGesture = false
                 allowContentAccess = true
                 allowFileAccess = true
+                allowFileAccessFromFileURLs = true
+                allowUniversalAccessFromFileURLs = true
             }
             addJavascriptInterface(JSBridge(), "Android")
             webViewClient = object : WebViewClient() {
@@ -250,35 +252,40 @@ class MainActivity : AppCompatActivity() {
                             alert('请输入网址');
                             return;
                         }
+                        // 添加协议
                         if (!url.startsWith('http://') && !url.startsWith('https://')) {
                             url = 'https://' + url;
                         }
+                        
+                        // 简单的域名检查
+                        var hostname = url.replace(/^https?:\/\//, '').split('/')[0];
+                        if (!hostname || hostname.length < 2) {
+                            alert('请输入有效网址');
+                            return;
+                        }
+                        
+                        var title = hostname;
+                        
+                        // Save to recent
                         try {
-                            var urlObj = new URL(url);
-                            if (!urlObj.hostname) {
-                                alert('请输入有效网址');
-                                return;
-                            }
-                            var title = urlObj.hostname;
-                            
-                            // Save to recent
                             var rec = JSON.parse(localStorage.getItem('justweb_recent') || '[]');
                             var newRec = [{title: title, url: url, time: Date.now()}, ...rec.filter(function(r) { return r.url !== url; })].slice(0, 10);
                             localStorage.setItem('justweb_recent', JSON.stringify(newRec));
-                            
-                            // Call Android to create shortcut
-                            if (typeof Android !== 'undefined' && Android.createShortcut) {
-                                Android.createShortcut(url, title);
-                            } else {
-                                // Fallback: try custom URL scheme
-                                window.location.href = 'justweb://create?url=' + encodeURIComponent(url) + '&title=' + encodeURIComponent(title);
-                            }
-                        } catch(e) {
-                            alert('请输入有效网址');
+                        } catch(e) {}
+                        
+                        // Call Android to create shortcut
+                        if (typeof Android !== 'undefined' && Android.createShortcut) {
+                            Android.createShortcut(url, title);
+                        } else {
+                            // Fallback: try custom URL scheme
+                            window.location.href = 'justweb://create?url=' + encodeURIComponent(url) + '&title=' + encodeURIComponent(title);
                         }
                     }
                     
-                    var recent = JSON.parse(localStorage.getItem('justweb_recent') || '[]');
+                    var recent = [];
+                    try {
+                        recent = JSON.parse(localStorage.getItem('justweb_recent') || '[]');
+                    } catch(e) {}
                     if (recent.length) {
                         document.getElementById('recent').innerHTML = '<h3>最近打开</h3>' +
                             recent.map(function(r) { 
