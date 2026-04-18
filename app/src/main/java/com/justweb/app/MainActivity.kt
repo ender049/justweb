@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -21,7 +22,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private var isFullscreen = false
 
-    @SuppressLint("SetJavaScriptEnabled")
+    @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -39,11 +40,16 @@ class MainActivity : AppCompatActivity() {
                 allowContentAccess = true
                 allowFileAccess = true
             }
+            addJavascriptInterface(JSBridge(), "Android")
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                     val url = request?.url?.toString() ?: return false
                     if (url.startsWith("http://") || url.startsWith("https://")) {
                         return false
+                    }
+                    if (url.startsWith("justweb://")) {
+                        handleCustomUrl(url)
+                        return true
                     }
                     try {
                         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
@@ -92,6 +98,70 @@ class MainActivity : AppCompatActivity() {
             View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
             View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         )
+    }
+
+    private fun handleCustomUrl(url: String) {
+        try {
+            val uri = Uri.parse(url)
+            val action = uri.host
+            when (action) {
+                "create" -> {
+                    val targetUrl = uri.getQueryParameter("url")
+                    val title = uri.getQueryParameter("title") ?: "JustWeb App"
+                    if (!targetUrl.isNullOrEmpty()) {
+                        createShortcut(targetUrl, title)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun createShortcut(url: String, title: String) {
+        val shortcutIntent = Intent(this, MainActivity::class.java).apply {
+            putExtra("url", url)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        val addShortcutIntent = Intent().apply {
+            action = "com.android.launcher.action.INSTALL_SHORTCUT"
+            putExtra(Intent.EXTRA_SHORTCUT_INTENT, shortcutIntent)
+            putExtra(Intent.EXTRA_SHORTCUT_NAME, title)
+            putExtra(Intent.EXTRA_SHORTCUT_ICON, generateIcon(title))
+        }
+
+        sendBroadcast(addShortcutIntent)
+        Toast.makeText(this, "已添加到主屏幕: $title", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun generateIcon(text: String): android.graphics.Bitmap {
+        val size = 192
+        val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+
+        canvas.drawColor(android.graphics.Color.parseColor("#e94560"))
+
+        val paint = android.graphics.Paint().apply {
+            color = android.graphics.Color.WHITE
+            textSize = size / 3f
+            isFakeBoldText = true
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+
+        val firstChar = text.first().uppercaseChar().toString()
+        canvas.drawText(firstChar, size / 2f, size / 2f + paint.textSize / 3f, paint)
+
+        return bitmap
+    }
+
+    inner class JSBridge {
+        @JavascriptInterface
+        fun createShortcut(url: String, title: String) {
+            runOnUiThread {
+                createShortcut(url, title)
+            }
+        }
     }
 
     private fun showHome() {
@@ -176,23 +246,36 @@ class MainActivity : AppCompatActivity() {
                 <script>
                     function go() {
                         var url = document.getElementById('url').value.trim();
-                        if (!url) return;
+                        if (!url) {
+                            alert('请输入网址');
+                            return;
+                        }
                         if (!url.startsWith('http://') && !url.startsWith('https://')) {
                             url = 'https://' + url;
                         }
                         try {
-                            var hostname = new URL(url).hostname;
-                            var title = hostname;
+                            var urlObj = new URL(url);
+                            if (!urlObj.hostname) {
+                                alert('请输入有效网址');
+                                return;
+                            }
+                            var title = urlObj.hostname;
+                            
+                            // Save to recent
                             var rec = JSON.parse(localStorage.getItem('justweb_recent') || '[]');
                             var newRec = [{title: title, url: url, time: Date.now()}, ...rec.filter(function(r) { return r.url !== url; })].slice(0, 10);
                             localStorage.setItem('justweb_recent', JSON.stringify(newRec));
                             
-                            // Use Android intent
-                            var intent = new WebKitIntent('android.intent.action.MAIN');
+                            // Call Android to create shortcut
+                            if (typeof Android !== 'undefined' && Android.createShortcut) {
+                                Android.createShortcut(url, title);
+                            } else {
+                                // Fallback: try custom URL scheme
+                                window.location.href = 'justweb://create?url=' + encodeURIComponent(url) + '&title=' + encodeURIComponent(title);
+                            }
                         } catch(e) {
                             alert('请输入有效网址');
                         }
-                        alert('请在浏览器中打开此页面后，添加到主屏幕');
                     }
                     
                     var recent = JSON.parse(localStorage.getItem('justweb_recent') || '[]');
