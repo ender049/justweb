@@ -54,11 +54,13 @@ jobs:
 
       - name: Create Release
         if: github.event_name == 'push'
+        continue-on-error: true
         uses: softprops/action-gh-release@v1
         with:
           tag_name: latest
           name: JustWeb Latest Build
           body: |
             Auto-built from commit ${{ github.sha }}
+            Download APK from Artifacts tab.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
