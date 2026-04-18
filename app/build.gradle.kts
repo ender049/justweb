@@ -3,6 +3,10 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+dependencies {
+    implementation("com.google.android.material:material:1.11.0")
+}
+
 android {
     namespace = "com.justweb.app"
     compileSdk = 34
