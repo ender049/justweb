@@ -48,8 +48,11 @@ class SiteIconStore(private val context: Context) {
         }
 
         executor.execute {
+            val cookieHeader = WebViewProfileManager.cookieHeaderForApp(app.id, app.url)
             val bitmap = runCatching {
-                resolveSiteIcon(app.url, WebViewProfileManager.cookieHeaderForApp(app.id, app.url))
+                resolveSiteIcon(app.url, cookieHeader)
+            }.getOrNull() ?: runCatching {
+                resolveSiteIcon(app.url, null)
             }.getOrNull()
             val success = bitmap?.let {
                 save(app.id, bitmap)
@@ -66,8 +69,11 @@ class SiteIconStore(private val context: Context) {
 
     fun fetchPreview(siteUrl: String, appId: String? = null, onResult: (Bitmap?) -> Unit) {
         executor.execute {
+            val cookieHeader = WebViewProfileManager.cookieHeaderForApp(appId, siteUrl)
             val bitmap = runCatching {
-                resolveSiteIcon(siteUrl, WebViewProfileManager.cookieHeaderForApp(appId, siteUrl))
+                resolveSiteIcon(siteUrl, cookieHeader)
+            }.getOrNull() ?: runCatching {
+                resolveSiteIcon(siteUrl, null)
             }.getOrNull()
             mainHandler.post { onResult(bitmap) }
         }
