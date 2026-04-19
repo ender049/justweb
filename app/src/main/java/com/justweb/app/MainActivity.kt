@@ -39,12 +39,12 @@ class MainActivity : AppCompatActivity() {
             showAddEditDialog(null)
         }
 
-        listView.setOnItemClickListener { position, _ ->
+        listView.setOnItemClickListener { parent, view, position, id ->
             val app = apps[position]
             openWebView(app)
         }
 
-        listView.setOnItemLongClickListener { position, _ ->
+        listView.setOnItemLongClickListener { parent, view, position, id ->
             val app = apps[position]
             showAppOptionsDialog(app)
             true

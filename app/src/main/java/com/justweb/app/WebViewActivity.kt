@@ -50,7 +50,7 @@ class WebViewActivity : AppCompatActivity() {
                 }
 
                 override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                    if (url != null && (url.startsWith("http://") || url.startsWith("https://")) {
+                    if (url != null && (url.startsWith("http://") || url.startsWith("https://"))) {
                         return false
                     }
                     try {
