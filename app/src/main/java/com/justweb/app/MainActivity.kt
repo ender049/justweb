@@ -1,6 +1,10 @@
 package com.justweb.app
 
 import android.content.Intent
+import android.content.pm.ShortcutInfo
+import android.content.pm.ShortcutManager
+import android.graphics.drawable.Icon
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
@@ -143,7 +147,78 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun addToDesktop(app: WebApp) {
-        Toast.makeText(this, "添加到桌面: ${app.name}", Toast.LENGTH_SHORT).show()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val shortcutManager = getSystemService(ShortcutManager::class.java)
+            if (shortcutManager == null || !shortcutManager.isRequestPinShortcutSupported) {
+                Toast.makeText(this, "桌面不支持", Toast.LENGTH_SHORT).show()
+                addToDesktopLegacy(app)
+                return
+            }
+
+            val intent = Intent(this, WebViewActivity::class.java).apply {
+                putExtra("app_id", app.id)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+
+            val shortcut = ShortcutInfo.Builder(this, "justweb_${app.id}")
+                .setShortLabel(app.name)
+                .setLongLabel(app.name)
+                .setIcon(Icon.createWithBitmap(generateIcon(app.name)))
+                .setIntent(intent)
+                .build()
+
+            try {
+                val result = shortcutManager.requestPinShortcut(shortcut, null)
+                if (result) {
+                    Toast.makeText(this, "已添加到桌面: ${app.name}", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "添加到桌面失败", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this, "错误: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            addToDesktopLegacy(app)
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun addToDesktopLegacy(app: WebApp) {
+        val intent = Intent(this, WebViewActivity::class.java).apply {
+            putExtra("app_id", app.id)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        val addShortcutIntent = Intent("com.android.launcher.action.INSTALL_SHORTCUT").apply {
+            putExtra(Intent.EXTRA_SHORTCUT_INTENT, intent)
+            putExtra(Intent.EXTRA_SHORTCUT_NAME, app.name)
+            putExtra(Intent.EXTRA_SHORTCUT_ICON, generateIcon(app.name))
+        }
+
+        try {
+            sendBroadcast(addShortcutIntent)
+            Toast.makeText(this, "已添加到桌面: ${app.name}", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "添加到桌面失败", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun generateIcon(text: String): android.graphics.Bitmap {
+        val size = 192
+        val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        canvas.drawColor(android.graphics.Color.parseColor("#e94560"))
+
+        val paint = android.graphics.Paint().apply {
+            color = android.graphics.Color.WHITE
+            textSize = size / 3f
+            isFakeBoldText = true
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+
+        val firstChar = text.first().uppercaseChar().toString()
+        canvas.drawText(firstChar, size / 2f, size / 2f + paint.textSize / 3f, paint)
+        return bitmap
     }
 
     private fun confirmDelete(app: WebApp) {
