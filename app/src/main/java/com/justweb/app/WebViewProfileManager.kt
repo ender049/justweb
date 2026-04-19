@@ -1,5 +1,7 @@
 package com.justweb.app
 
+import android.os.Handler
+import android.os.Looper
 import android.webkit.CookieManager
 import android.webkit.GeolocationPermissions
 import android.webkit.WebStorage
@@ -8,6 +10,9 @@ import androidx.webkit.ProfileStore
 import androidx.webkit.WebStorageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 object WebViewProfileManager {
 
@@ -24,13 +29,13 @@ object WebViewProfileManager {
     fun prepareWebViewForApp(webView: android.webkit.WebView, appId: String) {
         if (!supportsPerAppProfiles()) return
         val profileName = profileNameFor(appId)
-        ProfileStore.getInstance().getOrCreateProfile(profileName)
+        getOrCreateProfile(profileName)
         WebViewCompat.setProfile(webView, profileName)
     }
 
     fun cookieManagerForApp(appId: String): CookieManager {
         return if (supportsPerAppProfiles()) {
-            ProfileStore.getInstance().getOrCreateProfile(profileNameFor(appId)).cookieManager
+            getOrCreateProfile(profileNameFor(appId)).cookieManager
         } else {
             CookieManager.getInstance()
         }
@@ -38,7 +43,7 @@ object WebViewProfileManager {
 
     fun webStorageForApp(appId: String): WebStorage {
         return if (supportsPerAppProfiles()) {
-            ProfileStore.getInstance().getOrCreateProfile(profileNameFor(appId)).webStorage
+            getOrCreateProfile(profileNameFor(appId)).webStorage
         } else {
             WebStorage.getInstance()
         }
@@ -46,7 +51,7 @@ object WebViewProfileManager {
 
     fun geolocationPermissionsForApp(appId: String): GeolocationPermissions? {
         if (!supportsPerAppProfiles()) return null
-        return ProfileStore.getInstance().getOrCreateProfile(profileNameFor(appId)).geolocationPermissions
+        return getOrCreateProfile(profileNameFor(appId)).geolocationPermissions
     }
 
     fun cookieHeaderForApp(appId: String?, url: String): String? {
@@ -59,7 +64,7 @@ object WebViewProfileManager {
 
     fun clearBrowsingData(appId: String, siteUrl: String, mode: SiteCleanupMode, onComplete: () -> Unit): Boolean {
         if (supportsPerAppProfiles()) {
-            val profile = ProfileStore.getInstance().getOrCreateProfile(profileNameFor(appId))
+            val profile = getOrCreateProfile(profileNameFor(appId))
             when (mode) {
                 SiteCleanupMode.LOGIN_STATE,
                 SiteCleanupMode.WEB_CACHE -> clearProfileData(profile, onComplete)
@@ -100,4 +105,33 @@ object WebViewProfileManager {
             onComplete()
         })
     }
+
+    private fun getOrCreateProfile(profileName: String): androidx.webkit.Profile {
+        return runOnMainThreadBlocking {
+            ProfileStore.getInstance().getOrCreateProfile(profileName)
+        }
+    }
+
+    private fun <T> runOnMainThreadBlocking(block: () -> T): T {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            return block()
+        }
+
+        val result = AtomicReference<Result<T>>()
+        val latch = CountDownLatch(1)
+        mainHandler.post {
+            result.set(runCatching(block))
+            latch.countDown()
+        }
+
+        check(latch.await(MAIN_THREAD_TIMEOUT_SEC, TimeUnit.SECONDS)) {
+            "Timed out waiting for WebView profile access"
+        }
+
+        return result.get().getOrThrow()
+    }
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    private const val MAIN_THREAD_TIMEOUT_SEC = 5L
 }
