@@ -125,14 +125,17 @@ class MainActivity : AppCompatActivity() {
     }
 
 private fun createShortcut(url: String, title: String) {
+        android.util.Log.d("JustWeb", "createShortcut called: $url, $title")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val shortcutManager = getSystemService(ShortcutManager::class.java)
             if (shortcutManager == null) {
+                android.util.Log.e("JustWeb", "ShortcutManager is null")
                 Toast.makeText(this, "系统不支持", Toast.LENGTH_SHORT).show()
                 createShortcutLegacy(url, title)
                 return
             }
 
+            android.util.Log.d("JustWeb", "isRequestPinShortcutSupported: ${shortcutManager.isRequestPinShortcutSupported}")
             if (!shortcutManager.isRequestPinShortcutSupported) {
                 Toast.makeText(this, "桌面不支持", Toast.LENGTH_SHORT).show()
                 createShortcutLegacy(url, title)
@@ -153,12 +156,14 @@ private fun createShortcut(url: String, title: String) {
 
             try {
                 val result = shortcutManager.requestPinShortcut(shortcut, null)
+                android.util.Log.d("JustWeb", "requestPinShortcut result: $result")
                 if (result) {
                     Toast.makeText(this, "已添加到主屏幕: $title", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(this, "桌面拒绝请求", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
+                android.util.Log.e("JustWeb", "Shortcut error", e)
                 Toast.makeText(this, "错误: " + e.message, Toast.LENGTH_SHORT).show()
             }
         } else {
@@ -208,6 +213,7 @@ private fun createShortcut(url: String, title: String) {
         @JavascriptInterface
         fun createShortcut(url: String, title: String) {
             runOnUiThread {
+                android.util.Log.d("JustWeb", "JSBridge createShortcut called: $url, $title")
                 createShortcut(url, title)
             }
         }
