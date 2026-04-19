@@ -18,7 +18,6 @@ class WebViewActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private var app: WebApp? = null
-    private var isFullscreen = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,7 +43,6 @@ class WebViewActivity : AppCompatActivity() {
             domStorageEnabled = true
             loadWithOverviewMode = true
             useWideViewPort = true
-            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             allowContentAccess = true
             allowFileAccess = true
             databaseEnabled = true
@@ -61,32 +59,23 @@ class WebViewActivity : AppCompatActivity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 supportActionBar?.hide()
             }
-
-            override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                if (url.isNullOrEmpty()) return false
-                if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("file://")) {
-                    return false
-                }
-                try {
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                } catch (e: Exception) {
-                    Toast.makeText(this@WebViewActivity, "无法打开: $url", Toast.LENGTH_SHORT).show()
-                }
-                return true
-            }
         }
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowCustomView(view: View?, callback: WebChromeClient.CustomViewCallback?) {
                 super.onShowCustomView(view, callback)
                 if (view is FrameLayout) {
-                    setFullscreen(true)
+                    window.decorView.systemUiVisibility = (
+                        View.SYSTEM_UI_FLAG_FULLSCREEN or
+                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    )
                 }
             }
 
             override fun onHideCustomView() {
                 super.onHideCustomView()
-                setFullscreen(false)
+                window.decorView.systemUiVisibility = 0
             }
         }
 
@@ -96,20 +85,11 @@ class WebViewActivity : AppCompatActivity() {
             View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         )
 
-        webView.loadUrl(app!!.url)
-    }
-
-    private fun setFullscreen(enabled: Boolean) {
-        isFullscreen = enabled
-        if (enabled) {
-            window.decorView.systemUiVisibility = (
-                View.SYSTEM_UI_FLAG_FULLSCREEN or
-                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-            )
-        } else {
-            window.decorView.systemUiVisibility = 0
+        var url = app!!.url
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            url = "https://$url"
         }
+        webView.loadUrl(url)
     }
 
     override fun onResume() {
