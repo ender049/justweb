@@ -153,6 +153,7 @@ class MainActivity : AppCompatActivity() {
                 val shortcutManager = getSystemService(ShortcutManager::class.java)
                 if (shortcutManager != null && shortcutManager.isRequestPinShortcutSupported) {
                     val intent = Intent(this, WebViewActivity::class.java).apply {
+                        action = Intent.ACTION_MAIN
                         putExtra("app_id", app.id)
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
@@ -164,18 +165,44 @@ class MainActivity : AppCompatActivity() {
                         .setIntent(intent)
                         .build()
 
-                    success = shortcutManager.requestPinShortcut(shortcut, null)
+                    try {
+                        success = shortcutManager.requestPinShortcut(shortcut, null)
+                    } catch (e: Exception) {
+                        android.util.Log.e("JustWeb", "requestPinShortcut failed", e)
+                    }
                 }
             }
 
-            if (success) {
-                Toast.makeText(this, "已添加到桌面: ${app.name}", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, "桌面不支持，使用备用方式", Toast.LENGTH_SHORT).show()
+            if (!success) {
+                addToDesktopLegacy(app)
             }
         } catch (e: Exception) {
             android.util.Log.e("JustWeb", "addToDesktop error", e)
             Toast.makeText(this, "错误: ${e.message}", Toast.LENGTH_SHORT).show()
+            addToDesktopLegacy(app)
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun addToDesktopLegacy(app: WebApp) {
+        try {
+            val intent = Intent(this, WebViewActivity::class.java).apply {
+                action = Intent.ACTION_MAIN
+                putExtra("app_id", app.id)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+
+            val addShortcutIntent = Intent("com.android.launcher.action.INSTALL_SHORTCUT").apply {
+                putExtra(Intent.EXTRA_SHORTCUT_INTENT, intent)
+                putExtra(Intent.EXTRA_SHORTCUT_NAME, app.name)
+                putExtra(Intent.EXTRA_SHORTCUT_ICON, generateIcon(app.name))
+            }
+
+            sendBroadcast(addShortcutIntent)
+            Toast.makeText(this, "已添加到桌面: ${app.name}", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            android.util.Log.e("JustWeb", "Legacy failed", e)
+            Toast.makeText(this, "添加到桌面失败: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
