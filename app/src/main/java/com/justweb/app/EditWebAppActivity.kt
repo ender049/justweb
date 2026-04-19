@@ -21,6 +21,8 @@ class EditWebAppActivity : AppCompatActivity() {
     private lateinit var storage: WebAppStorage
     private lateinit var iconStore: SiteIconStore
     private var existingApp: WebApp? = null
+    private var previewIconBitmap: android.graphics.Bitmap? = null
+    private var previewIconUrl: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,6 +92,10 @@ class EditWebAppActivity : AppCompatActivity() {
             }
         }
 
+        editUrl.doAfterTextChanged {
+            previewIconUrl = null
+        }
+
         btnRefreshIcon.setOnClickListener {
             val urlInput = editUrl.text?.toString()?.trim().orEmpty()
             val validation = UrlValidator.validate(urlInput)
@@ -102,6 +108,8 @@ class EditWebAppActivity : AppCompatActivity() {
             iconHint.text = "正在获取..."
             refreshIcon(existingApp?.id, validation.normalizedUrl) { bitmap ->
                 if (bitmap != null) {
+                    previewIconBitmap = bitmap
+                    previewIconUrl = validation.normalizedUrl
                     iconPreview.setImageBitmap(bitmap)
                     iconPreview.visibility = android.view.View.VISIBLE
                     iconFallback.visibility = android.view.View.GONE
@@ -158,6 +166,17 @@ class EditWebAppActivity : AppCompatActivity() {
     }
 
     private fun refreshAndStoreIcon(app: WebApp) {
+        val previewBitmap = previewIconBitmap
+        if (previewBitmap != null && previewIconUrl == app.url) {
+            iconStore.store(app.id, previewBitmap)
+            return
+        }
+
+        val currentIcon = iconStore.load(app.id)
+        if (currentIcon != null && existingApp?.url == app.url) {
+            return
+        }
+
         iconStore.fetchAndStore(app, forceRefresh = true)
     }
 
@@ -169,6 +188,8 @@ class EditWebAppActivity : AppCompatActivity() {
         icon: android.graphics.Bitmap?
     ) {
         if (icon != null) {
+            previewIconBitmap = icon
+            previewIconUrl = existingApp?.url
             imageView.setImageBitmap(icon)
             imageView.visibility = android.view.View.VISIBLE
             fallbackView.visibility = android.view.View.GONE
@@ -176,6 +197,8 @@ class EditWebAppActivity : AppCompatActivity() {
             return
         }
 
+        previewIconBitmap = null
+        previewIconUrl = null
         imageView.setImageDrawable(null)
         imageView.visibility = android.view.View.GONE
         fallbackView.visibility = android.view.View.VISIBLE
