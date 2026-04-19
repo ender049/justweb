@@ -6,12 +6,14 @@ import android.content.pm.ShortcutManager
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
@@ -43,15 +45,8 @@ class MainActivity : AppCompatActivity() {
             showAddEditDialog(null)
         }
 
-        listView.setOnItemClickListener { parent, view, position, id ->
-            val app = apps[position]
-            openWebView(app)
-        }
-
-        listView.setOnItemLongClickListener { parent, view, position, id ->
-            val app = apps[position]
-            showAppOptionsDialog(app)
-            true
+        listView.setOnItemClickListener { _, _, position, _ ->
+            openWebView(apps[position])
         }
     }
 
@@ -88,40 +83,49 @@ class MainActivity : AppCompatActivity() {
             hint = "网站地址"
             setText(app?.url ?: "")
         }
-        val checkNotify = CheckBox(this).apply {
-            text = "允许发送通知"
-            isChecked = app?.notificationsEnabled ?: false
+        val checkNotify = CheckBox(this).apply { text = "允许通知" }
+        val checkFullscreen = CheckBox(this).apply { text = "全屏显示" }
+        val checkStatusBar = CheckBox(this).apply { text = "显示状态栏" }
+
+        if (app != null) {
+            checkNotify.isChecked = app.notificationsEnabled
+            checkFullscreen.isChecked = app.fullscreen
+            checkStatusBar.isChecked = app.showStatusBar
+        } else {
+            checkFullscreen.isChecked = true
         }
 
         layout.addView(TextView(this).apply { text = "应用名称" })
         layout.addView(editName)
         layout.addView(TextView(this).apply { text = "网站地址" })
         layout.addView(editUrl)
+        layout.addView(checkFullscreen)
+        layout.addView(checkStatusBar)
         layout.addView(checkNotify)
 
         AlertDialog.Builder(this)
             .setTitle(if (isEdit) "编辑应用" else "添加应用")
             .setView(layout)
             .setPositiveButton("保存") { _, _ ->
-                val name = editName.text.toString().trim()
-                var url = editUrl.text.toString().trim()
+                val urlInput = editUrl.text.toString().trim()
+                val validation = UrlValidator.validate(urlInput)
 
-                if (name.isEmpty()) {
+                if (editName.text.toString().trim().isEmpty()) {
                     Toast.makeText(this, "请输入应用名称", Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
-                if (url.isEmpty()) {
-                    Toast.makeText(this, "请输入网站地址", Toast.LENGTH_SHORT).show()
+                if (!validation.isValid) {
+                    Toast.makeText(this, validation.error ?: "无效的网址", Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
-                }
-                if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                    url = "https://$url"
                 }
 
                 val newApp = WebApp(
                     id = app?.id ?: java.util.UUID.randomUUID().toString(),
-                    name = name,
-                    url = url,
+                    name = editName.text.toString().trim(),
+                    url = validation.normalizedUrl,
+                    fullscreen = checkFullscreen.isChecked,
+                    showStatusBar = checkStatusBar.isChecked,
+                    showAddressBar = false,
                     notificationsEnabled = checkNotify.isChecked
                 )
                 storage.save(newApp)
@@ -132,18 +136,8 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun showAppOptionsDialog(app: WebApp) {
-        val options = arrayOf("编辑", "添加到桌面", "删除")
-        AlertDialog.Builder(this)
-            .setTitle(app.name)
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> showAddEditDialog(app)
-                    1 -> addToDesktop(app)
-                    2 -> confirmDelete(app)
-                }
-            }
-            .show()
+    private fun editApp(app: WebApp) {
+        showAddEditDialog(app)
     }
 
     private fun addToDesktop(app: WebApp) {
@@ -199,10 +193,10 @@ class MainActivity : AppCompatActivity() {
             }
 
             sendBroadcast(addShortcutIntent)
-            Toast.makeText(this, "已添加到桌面: ${app.name}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "已添加到桌面", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             android.util.Log.e("JustWeb", "Legacy failed", e)
-            Toast.makeText(this, "添加到桌面失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "��加到桌面失败", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -241,14 +235,17 @@ class MainActivity : AppCompatActivity() {
         override fun getCount() = apps.size
         override fun getItem(position: Int) = apps[position]
         override fun getItemId(position: Int) = position.toLong()
+
         override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
-            val view = convertView ?: layoutInflater.inflate(android.R.layout.simple_list_item_2, parent, false)
-            val text1 = view.findViewById<TextView>(android.R.id.text1)
-            val text2 = view.findViewById<TextView>(android.R.id.text2)
+            val view = convertView ?: layoutInflater.inflate(R.layout.item_app, parent, false)
             val app = apps[position]
-            text1.text = app.name
-            text2.text = app.url
-            text2.textSize = 12f
+
+            view.findViewById<TextView>(R.id.textName).text = app.name
+            view.findViewById<TextView>(R.id.textUrl).text = app.url
+
+            view.findViewById<ImageButton>(R.id.btnEdit).setOnClickListener { editApp(app) }
+            view.findViewById<ImageButton>(R.id.btnDesktop).setOnClickListener { addToDesktop(app) }
+
             return view
         }
     }

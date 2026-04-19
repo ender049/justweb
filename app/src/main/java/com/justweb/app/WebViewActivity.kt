@@ -1,9 +1,7 @@
 package com.justweb.app
 
 import android.annotation.SuppressLint
-import android.content.Intent
-import android.graphics.Bitmap
-import android.net.Uri
+import android.content.pm.ShortcutManager
 import android.os.Bundle
 import android.view.View
 import android.webkit.WebChromeClient
@@ -31,6 +29,7 @@ class WebViewActivity : AppCompatActivity() {
 
         app = WebAppStorage(this).getById(appId)
         if (app == null) {
+            Toast.makeText(this, "应用不存在", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -52,7 +51,7 @@ class WebViewActivity : AppCompatActivity() {
         }
 
         webView.webViewClient = object : WebViewClient() {
-            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+            override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
                 supportActionBar?.hide()
             }
 
@@ -65,31 +64,38 @@ class WebViewActivity : AppCompatActivity() {
             override fun onShowCustomView(view: View?, callback: WebChromeClient.CustomViewCallback?) {
                 super.onShowCustomView(view, callback)
                 if (view is FrameLayout) {
-                    window.decorView.systemUiVisibility = (
-                        View.SYSTEM_UI_FLAG_FULLSCREEN or
-                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                    )
+                    setFullscreen(true)
                 }
             }
 
             override fun onHideCustomView() {
                 super.onHideCustomView()
-                window.decorView.systemUiVisibility = 0
+                setFullscreen(false)
             }
         }
 
-        window.decorView.systemUiVisibility = (
-            View.SYSTEM_UI_FLAG_FULLSCREEN or
-            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-        )
-
-        var url = app!!.url
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
-            url = "https://$url"
+        val config = app!!
+        if (config.fullscreen) {
+            window.decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            )
+        } else if (!config.showStatusBar) {
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN
         }
-        webView.loadUrl(url)
+
+        webView.loadUrl(config.url)
+    }
+
+    private fun setFullscreen(enabled: Boolean) {
+        if (enabled) {
+            window.decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            )
+        }
     }
 
     override fun onResume() {

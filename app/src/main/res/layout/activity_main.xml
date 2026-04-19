@@ -2,22 +2,44 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:background="#f5f5f5">
 
-    <TextView
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="JustWeb"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:padding="16dp"
-        android:background="#e94560" />
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#e94560"
+        android:padding="0 16dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="JustWeb"
+            android:textSize="20sp"
+            android:textColor="#fff"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btnAdd"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="+ 添加"
+            android:textColor="#fff"
+            android:background="@android:color/transparent"
+            android:textSize="16sp" />
+
+    </LinearLayout>
 
     <ListView
         android:id="@+id/listView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:dividerHeight="1dp"
+        android:divider="#e0e0e0" />
 
     <TextView
         android:id="@+id/emptyView"
@@ -25,14 +47,8 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:gravity="center"
-        android:text="暂无应用\n点击下方按钮添加"
+        android:text="暂无应用\n点击右上角添加"
+        android:textColor="#999"
         android:visibility="gone" />
-
-    <Button
-        android:id="@+id/btnAdd"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="添加应用"
-        android:layout_margin="16dp" />
 
 </LinearLayout>
