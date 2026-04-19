@@ -124,15 +124,27 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun createShortcut(url: String, title: String) {
+private fun createShortcut(url: String, title: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val shortcutManager = getSystemService(ShortcutManager::class.java)
+            if (shortcutManager == null) {
+                Toast.makeText(this, "系统不支持", Toast.LENGTH_SHORT).show()
+                createShortcutLegacy(url, title)
+                return
+            }
+
+            if (!shortcutManager.isRequestPinShortcutSupported) {
+                Toast.makeText(this, "桌面不支持", Toast.LENGTH_SHORT).show()
+                createShortcutLegacy(url, title)
+                return
+            }
+
             val shortcutIntent = Intent(this, MainActivity::class.java).apply {
                 putExtra("url", url)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
 
-            val shortcut = ShortcutInfo.Builder(this, url)
+            val shortcut = ShortcutInfo.Builder(this, "justweb_" + url.hashCode())
                 .setShortLabel(title)
                 .setLongLabel(title)
                 .setIcon(Icon.createWithBitmap(generateIcon(title)))
@@ -140,10 +152,47 @@ class MainActivity : AppCompatActivity() {
                 .build()
 
             try {
-                shortcutManager.requestPinShortcut(shortcut, null)
-                Toast.makeText(this, "已添加到主屏幕: $title", Toast.LENGTH_SHORT).show()
+                val result = shortcutManager.requestPinShortcut(shortcut, null)
+                if (result) {
+                    Toast.makeText(this, "已添加到主屏幕: $title", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "桌面拒绝请求", Toast.LENGTH_SHORT).show()
+                }
             } catch (e: Exception) {
-                Toast.makeText(this, "无法创建快捷方式", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "错误: " + e.message, Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            createShortcutLegacy(url, title)
+        }
+    }
+
+            if (!shortcutManager.isRequestPinShortcutSupported) {
+                Toast.makeText(this, "桌面不支持", Toast.LENGTH_SHORT).show()
+                createShortcutLegacy(url, title)
+                return
+            }
+
+            val shortcutIntent = Intent(this, MainActivity::class.java).apply {
+                putExtra("url", url)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+
+            val shortcut = ShortcutInfo.Builder(this, "justweb_" + url.hashCode())
+                .setShortLabel(title)
+                .setLongLabel(title)
+                .setIcon(Icon.createWithBitmap(generateIcon(title)))
+                .setIntent(shortcutIntent)
+                .build()
+
+            try {
+                val result = shortcutManager.requestPinShortcut(shortcut, null)
+                if (result) {
+                    Toast.makeText(this, "已添加到主屏幕: $title", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "桌面拒绝请求", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this, "错误: " + e.message, Toast.LENGTH_SHORT).show()
             }
         } else {
             createShortcutLegacy(url, title)
