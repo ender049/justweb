@@ -653,6 +653,10 @@ class WebViewActivity : AppCompatActivity() {
         val config = app ?: return
         val controller = WindowCompat.getInsetsController(window, window.decorView)
 
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val layoutMode = if (config.fullscreen) {
                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
@@ -666,9 +670,6 @@ class WebViewActivity : AppCompatActivity() {
 
         when {
             config.fullscreen -> {
-                WindowCompat.setDecorFitsSystemWindows(window, false)
-                window.statusBarColor = Color.TRANSPARENT
-                window.navigationBarColor = Color.TRANSPARENT
                 controller.isAppearanceLightStatusBars = false
                 controller.isAppearanceLightNavigationBars = false
                 controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -676,11 +677,8 @@ class WebViewActivity : AppCompatActivity() {
             }
 
             else -> {
-                WindowCompat.setDecorFitsSystemWindows(window, true)
-                window.statusBarColor = Color.BLACK
-                window.navigationBarColor = Color.BLACK
-                controller.isAppearanceLightStatusBars = false
-                controller.isAppearanceLightNavigationBars = false
+                controller.isAppearanceLightStatusBars = true
+                controller.isAppearanceLightNavigationBars = true
                 controller.show(WindowInsetsCompat.Type.systemBars())
             }
         }
