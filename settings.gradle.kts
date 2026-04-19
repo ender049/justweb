@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Hermit"
+rootProject.name = "JustWeb"
 include(":app")

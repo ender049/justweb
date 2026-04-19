@@ -1,96 +1,113 @@
 # JustWeb
 
-一款将网站封装为 Android 全屏应用的工具应用。
+JustWeb is a lightweight Android app that turns websites into simple full-screen tools.
 
-## 功能特性
+It is designed for people who want to save a few frequently used sites, open them quickly, and use them like standalone apps without building a full browser UI.
 
-- **网站转应用**：输入 URL 即可创建全屏应用
-- **添加到桌面**：一键创建桌面快捷方式
-- **全屏浏览**：沉浸式网页浏览体验
-- **应用管理**：添加、编辑、删除应用
+## Features
 
-## 应用配置
+- Save websites and open them from the list or launcher shortcuts
+- Full-screen website runtime with minimal chrome
+- Per-site options for fullscreen, desktop mode, keep screen on, and external link behavior
+- Site icon fetching from PWA `manifest/icons` with fallback handling
+- File upload, file download, and `blob:` download support
+- Popup and OAuth-friendly WebView behavior
+- Per-site data reset for login and cache cleanup
+- Support for `http://`, LAN IPs, localhost, and mixed-content sites
 
-每个应用支持以下配置：
+## Product Scope
 
-| 配置项 | 说明 | 默认值 |
-|-------|------|--------|
-| 应用名称 | 显示名称 | - |
-| 网站地址 | URL，支持 http/https/localhost | - |
-| 全屏显示 | 隐藏状态栏和导航栏 | true |
-| 显示状态栏 | 显示顶部状态栏 | false |
-| 允许通知 | 是否允许推送通知 | false |
+JustWeb is intentionally not a browser.
 
-## 技术栈
+It does not aim to provide:
 
-- **语言**：Kotlin
-- **最低版本**：Android 8.0 (API 26)
-- **目标版本**：Android 14 (API 34)
-- **依赖**：AndroidX、Material Design、Gson
+- tabs
+- bookmarks or history pages
+- a persistent address bar
+- a persistent top toolbar
+- script managers, blockers, or browser-style advanced settings
 
-## 项目结构
+## Screens
 
-```
+- Main screen: manage saved websites
+- Edit screen: configure one website
+- Runtime screen: open the website in a dedicated WebView
+
+## Tech Stack
+
+- Kotlin
+- Android WebView
+- AndroidX WebKit
+- Material Components
+- Gson
+- Jsoup
+- AndroidSVG
+
+## Requirements
+
+- Min SDK: 26
+- Target SDK: 34
+- JDK: 17
+
+## Project Structure
+
+```text
 app/src/main/
 ├── java/com/justweb/app/
-│   ├── MainActivity.kt       # 应用列表页面
-│   ├── WebViewActivity.kt   # WebView 全屏页面
-│   ├── WebApp.kt          # 数据模型 + URL 验证
-│   └── WebAppStorage.kt   # 数据持久化
+│   ├── MainActivity.kt
+│   ├── EditWebAppActivity.kt
+│   ├── WebViewActivity.kt
+│   ├── WebApp.kt
+│   ├── WebAppStorage.kt
+│   ├── SiteIconStore.kt
+│   ├── SiteDataCleaner.kt
+│   └── WebViewProfileManager.kt
 └── res/
-    └── layout/
-        ├── activity_main.xml  # 主页面布局
-        └── item_app.xml      # 应用列表项布局
+    ├── layout/
+    │   ├── activity_main.xml
+    │   ├── activity_edit_web_app.xml
+    │   ├── activity_web_view.xml
+    │   ├── dialog_app_actions.xml
+    │   └── item_app.xml
+    └── values/
+        ├── colors.xml
+        ├── strings.xml
+        └── themes.xml
 ```
 
-## 构建
+## Build
+
+Debug build:
 
 ```bash
-# 本地构建（需要 Android SDK）
-cd android
 ./gradlew assembleDebug
-
-# 或使用 GitHub Actions（自动构建）
-git push
 ```
 
-构建产物位于：`app/build/outputs/apk/debug/`
+Release build:
 
-## 开发指南
-
-### 添加新应用
-
-```kotlin
-val app = WebApp(
-    name = "应用名称",
-    url = "https://example.com",
-    fullscreen = true,
-    showStatusBar = false,
-    notificationsEnabled = false
-)
-storage.save(app)
+```bash
+./gradlew assembleRelease
 ```
 
-### 启动 WebView
+APK output:
 
-```kotlin
-val intent = Intent(context, WebViewActivity::class.java)
-intent.putExtra("app_id", appId)
-startActivity(intent)
-```
+- `app/build/outputs/apk/debug/`
+- `app/build/outputs/apk/release/`
 
-### 验证 URL
+## Signing
 
-```kotlin
-val result = UrlValidator.validate(inputUrl)
-if (result.isValid) {
-    // 使用 result.normalizedUrl
-} else {
-    // 显示错误 result.error
-}
-```
+If you want to build a signed release APK, copy `keystore.properties.example` to `keystore.properties` and fill in your own values.
 
-## 相关资源
+Do not commit `keystore.properties` or any real keystore files.
 
-- [Android 快捷方式文档](https://developer.android.com/develop/ui/launch-shortcuts)
-- [WebView 开发指南](https://developer.android.com/guide/webapps/)
+## Testing
+
+Manual test checklist:
+
+- `docs/manual-test-checklist.md`
+
+## Notes
+
+- The runtime page should stay minimal.
+- Management and recovery actions belong on the main screen.
+- New features should be judged against the core goal: using websites like simple tools, not like browser tabs.
