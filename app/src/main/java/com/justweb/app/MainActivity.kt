@@ -2,8 +2,12 @@ package com.justweb.app
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.pm.ShortcutInfo
+import android.content.pm.ShortcutManager
 import android.graphics.Bitmap
+import android.graphics.drawable.Icon
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.WindowInsets
@@ -121,6 +125,33 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun createShortcut(url: String, title: String) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val shortcutManager = getSystemService(ShortcutManager::class.java)
+            val shortcutIntent = Intent(this, MainActivity::class.java).apply {
+                putExtra("url", url)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+
+            val shortcut = ShortcutInfo.Builder(this, url)
+                .setShortLabel(title)
+                .setLongLabel(title)
+                .setIcon(Icon.createWithBitmap(generateIcon(title)))
+                .setIntent(shortcutIntent)
+                .build()
+
+            try {
+                shortcutManager.requestPinShortcut(shortcut, null)
+                Toast.makeText(this, "已添加到主屏幕: $title", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(this, "无法创建快捷方式", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            createShortcutLegacy(url, title)
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun createShortcutLegacy(url: String, title: String) {
         val shortcutIntent = Intent(this, MainActivity::class.java).apply {
             putExtra("url", url)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
