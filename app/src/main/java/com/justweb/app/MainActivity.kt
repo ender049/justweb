@@ -212,9 +212,11 @@ private fun createShortcut(url: String, title: String) {
     inner class JSBridge {
         @JavascriptInterface
         fun createShortcut(url: String, title: String) {
+            android.util.Log.d("JustWeb", "JSBridge createShortcut called: $url, $title")
             runOnUiThread {
-                android.util.Log.d("JustWeb", "JSBridge createShortcut called: $url, $title")
+                android.util.Log.d("JustWeb", "Running on UI thread")
                 createShortcut(url, title)
+                android.util.Log.d("JustWeb", "createShortcut finished")
             }
         }
     }
@@ -327,10 +329,9 @@ private fun createShortcut(url: String, title: String) {
                         } catch(e) {}
                         
                         // Call Android to create shortcut
-                        alert('Calling Android.createShortcut');
                         if (typeof Android !== 'undefined' && Android.createShortcut) {
-                            alert('Android object exists, calling');
                             Android.createShortcut(url, title);
+                            alert('Android.createShortcut called');
                         } else {
                             alert('Android object NOT found, using fallback');
                             // Fallback: try custom URL scheme
