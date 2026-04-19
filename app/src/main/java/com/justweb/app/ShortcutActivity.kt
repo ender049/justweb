@@ -17,17 +17,22 @@ class ShortcutActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        android.util.Log.d("JustWeb", "ShortcutActivity onCreate")
 
         val url = intent?.getStringExtra("url")
         val title = intent?.getStringExtra("title")
 
+        android.util.Log.d("JustWeb", "url: $url, title: $title")
+
         if (url.isNullOrEmpty()) {
+            android.util.Log.e("JustWeb", "url is empty")
             Toast.makeText(this, "无效的网址", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
 
         createShortcutNewApi(url, title ?: "JustWeb App")
+        android.util.Log.d("JustWeb", "after createShortcutNewApi")
         Toast.makeText(this, "已添加到主屏幕", Toast.LENGTH_SHORT).show()
         finish()
     }

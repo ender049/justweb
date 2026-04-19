@@ -327,9 +327,12 @@ private fun createShortcut(url: String, title: String) {
                         } catch(e) {}
                         
                         // Call Android to create shortcut
+                        alert('Calling Android.createShortcut');
                         if (typeof Android !== 'undefined' && Android.createShortcut) {
+                            alert('Android object exists, calling');
                             Android.createShortcut(url, title);
                         } else {
+                            alert('Android object NOT found, using fallback');
                             // Fallback: try custom URL scheme
                             window.location.href = 'justweb://create?url=' + encodeURIComponent(url) + '&title=' + encodeURIComponent(title);
                         }
