@@ -63,3 +63,19 @@ android {
         jvmTarget = "17"
     }
 }
+
+tasks.register("renameReleaseApk") {
+    dependsOn("assembleRelease")
+    doLast {
+        val releaseDir = file("$projectDir/build/outputs/apk/release")
+        val source = releaseDir.resolve("app-release.apk")
+        val target = releaseDir.resolve("justweb-v0.1.0-release.apk")
+
+        if (source.exists()) {
+            if (target.exists()) {
+                target.delete()
+            }
+            source.copyTo(target, overwrite = true)
+        }
+    }
+}

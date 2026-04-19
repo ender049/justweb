@@ -42,7 +42,7 @@ jobs:
         run: ./gradlew assembleDebug --stacktrace
 
       - name: Build release APK
-        run: ./gradlew assembleRelease --stacktrace
+        run: ./gradlew renameReleaseApk --stacktrace
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
@@ -55,7 +55,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: justweb-release
-          path: app/build/outputs/apk/release/*.apk
+          path: app/build/outputs/apk/release/justweb-v*-release.apk
           retention-days: 30
 
       - name: Create GitHub release
@@ -63,5 +63,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/justweb-v*-release.apk
           generate_release_notes: true
