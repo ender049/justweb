@@ -14,7 +14,7 @@ android {
 
     defaultConfig {
         applicationId = "com.justweb.app"
-        minSdk = 23
+        minSdk = 26
         targetSdk = 34
     }
 
