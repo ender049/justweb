@@ -3,8 +3,9 @@ package com.justweb.app
 import android.app.DownloadManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.content.res.Configuration
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
@@ -57,7 +58,11 @@ class WebViewActivity : AppCompatActivity() {
     private val fileChooserLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val callback = fileChooserCallback ?: return@registerForActivityResult
         fileChooserCallback = null
-        callback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(result.resultCode, result.data))
+        val uris = WebChromeClient.FileChooserParams.parseResult(result.resultCode, result.data)
+        if (result.resultCode == RESULT_OK) {
+            uris?.forEach(::grantFileChooserUriPermission)
+        }
+        callback.onReceiveValue(uris)
     }
 
     private val blobDownloadLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -351,6 +356,7 @@ class WebViewActivity : AppCompatActivity() {
         app = resolvedApp
         appBaseUri = Uri.parse(resolvedApp.url)
         title = resolvedApp.name
+        applyScreenOrientation(resolvedApp)
         applySiteSettings(resolvedApp)
         applyWindowMode()
 
@@ -384,10 +390,22 @@ class WebViewActivity : AppCompatActivity() {
         )
     }
 
+    private fun grantFileChooserUriPermission(uri: Uri) {
+        try {
+            contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        } catch (_: Exception) {
+            // Some pickers return temporary-only grants; WebView can still consume them for this upload.
+        }
+    }
+
     private fun launchFileChooser(
         filePathCallback: ValueCallback<Array<Uri>>?,
         fileChooserParams: WebChromeClient.FileChooserParams?
     ): Boolean {
+        if (filePathCallback == null) {
+            return false
+        }
+
         fileChooserCallback?.onReceiveValue(null)
         fileChooserCallback = filePathCallback
 
@@ -398,17 +416,20 @@ class WebViewActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             fileChooserCallback = null
+            filePathCallback.onReceiveValue(null)
             Toast.makeText(this, "无法打开文件选择器", Toast.LENGTH_SHORT).show()
-            return false
+            return true
         }
+        chooserIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
 
         return try {
             fileChooserLauncher.launch(chooserIntent)
             true
         } catch (e: ActivityNotFoundException) {
             fileChooserCallback = null
+            filePathCallback.onReceiveValue(null)
             Toast.makeText(this, "设备上没有可用的文件选择器", Toast.LENGTH_SHORT).show()
-            false
+            true
         }
     }
 
@@ -418,10 +439,14 @@ class WebViewActivity : AppCompatActivity() {
 
         val popupView = WebView(this).apply {
             app?.id?.let { WebViewProfileManager.prepareWebViewForApp(this, it) }
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.javaScriptCanOpenWindowsAutomatically = true
-            settings.setSupportMultipleWindows(true)
+            settings.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                allowContentAccess = true
+                allowFileAccess = true
+                javaScriptCanOpenWindowsAutomatically = true
+                setSupportMultipleWindows(true)
+            }
             setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
                 handleDownloadRequest(url, userAgent, contentDisposition, mimeType)
             }
@@ -434,6 +459,20 @@ class WebViewActivity : AppCompatActivity() {
                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                     val popupUrl = url?.takeUnless { it == "about:blank" } ?: return
                     routePopupUri(Uri.parse(popupUrl))
+                }
+            }
+            webChromeClient = object : WebChromeClient() {
+                override fun onShowFileChooser(
+                    webView: WebView?,
+                    filePathCallback: ValueCallback<Array<Uri>>?,
+                    fileChooserParams: FileChooserParams?
+                ): Boolean {
+                    return launchFileChooser(filePathCallback, fileChooserParams)
+                }
+
+                override fun onPermissionRequest(request: PermissionRequest?) {
+                    request ?: return
+                    handleWebPermissionRequest(request)
                 }
             }
         }
@@ -575,6 +614,15 @@ class WebViewActivity : AppCompatActivity() {
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         } else {
             window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
+    private fun applyScreenOrientation(config: WebApp) {
+        requestedOrientation = when (config.screenOrientation) {
+            SiteScreenOrientation.AUTO -> ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+            SiteScreenOrientation.LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            SiteScreenOrientation.PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            else -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
 

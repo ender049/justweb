@@ -9,7 +9,8 @@ data class WebApp(
     val fullscreen: Boolean = true,
     val keepScreenOn: Boolean = false,
     val desktopMode: Boolean = false,
-    val externalLinkPolicy: Int = ExternalLinkPolicy.SAME_DOMAIN
+    val externalLinkPolicy: Int = ExternalLinkPolicy.SAME_DOMAIN,
+    val screenOrientation: Int = SiteScreenOrientation.FOLLOW_SYSTEM
 )
 
 object ExternalLinkPolicy {
@@ -35,6 +36,34 @@ object ExternalLinkPolicy {
 
     fun valueForLabel(label: String): Int {
         return options.firstOrNull { it.label == label }?.value ?: SAME_DOMAIN
+    }
+}
+
+object SiteScreenOrientation {
+    const val FOLLOW_SYSTEM = 0
+    const val AUTO = 1
+    const val LANDSCAPE = 2
+    const val PORTRAIT = 3
+
+    data class Option(
+        val value: Int,
+        val label: String,
+        val description: String
+    )
+
+    val options = listOf(
+        Option(FOLLOW_SYSTEM, "跟随系统", "尊重系统自动旋转或锁定方向设置。"),
+        Option(AUTO, "自动", "始终按设备传感器自动旋转。"),
+        Option(LANDSCAPE, "横向", "固定为横屏显示。"),
+        Option(PORTRAIT, "竖向", "固定为竖屏显示。")
+    )
+
+    fun optionFor(value: Int): Option {
+        return options.firstOrNull { it.value == value } ?: options.first()
+    }
+
+    fun valueForLabel(label: String): Int {
+        return options.firstOrNull { it.label == label }?.value ?: FOLLOW_SYSTEM
     }
 }
 

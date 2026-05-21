@@ -47,6 +47,7 @@ class EditWebAppActivity : AppCompatActivity() {
         val switchDesktopMode = findViewById<SwitchMaterial>(R.id.switchDesktopMode)
         val switchKeepScreenOn = findViewById<SwitchMaterial>(R.id.switchKeepScreenOn)
         val linkPolicyInput = findViewById<AutoCompleteTextView>(R.id.inputLinkPolicy)
+        val orientationInput = findViewById<AutoCompleteTextView>(R.id.inputScreenOrientation)
         val btnSave = findViewById<MaterialButton>(R.id.btnSave)
         val btnCancel = findViewById<MaterialButton>(R.id.btnCancel)
 
@@ -69,6 +70,10 @@ class EditWebAppActivity : AppCompatActivity() {
         linkPolicyInput.setAdapter(
             ArrayAdapter(this, android.R.layout.simple_list_item_1, linkPolicyLabels)
         )
+        val orientationLabels = SiteScreenOrientation.options.map { it.label }
+        orientationInput.setAdapter(
+            ArrayAdapter(this, android.R.layout.simple_list_item_1, orientationLabels)
+        )
 
         existingApp?.let { app ->
             editName.setText(app.name)
@@ -77,12 +82,14 @@ class EditWebAppActivity : AppCompatActivity() {
             switchDesktopMode.isChecked = app.desktopMode
             switchKeepScreenOn.isChecked = app.keepScreenOn
             linkPolicyInput.setText(ExternalLinkPolicy.optionFor(app.externalLinkPolicy).label, false)
+            orientationInput.setText(SiteScreenOrientation.optionFor(app.screenOrientation).label, false)
             bindPreview(iconPreview, iconFallback, iconHint, app.name, iconStore.load(app.id))
         } ?: run {
             switchFullscreen.isChecked = true
             switchDesktopMode.isChecked = false
             switchKeepScreenOn.isChecked = false
             linkPolicyInput.setText(ExternalLinkPolicy.options.first().label, false)
+            orientationInput.setText(SiteScreenOrientation.options.first().label, false)
             bindPreview(iconPreview, iconFallback, iconHint, editName.text?.toString().orEmpty(), null)
         }
 
@@ -152,7 +159,8 @@ class EditWebAppActivity : AppCompatActivity() {
                 fullscreen = switchFullscreen.isChecked,
                 keepScreenOn = switchKeepScreenOn.isChecked,
                 desktopMode = switchDesktopMode.isChecked,
-                externalLinkPolicy = ExternalLinkPolicy.valueForLabel(linkPolicyInput.text?.toString().orEmpty())
+                externalLinkPolicy = ExternalLinkPolicy.valueForLabel(linkPolicyInput.text?.toString().orEmpty()),
+                screenOrientation = SiteScreenOrientation.valueForLabel(orientationInput.text?.toString().orEmpty())
             )
             storage.save(updatedApp)
             refreshAndStoreIcon(updatedApp)

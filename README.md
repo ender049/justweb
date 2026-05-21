@@ -8,7 +8,7 @@ It is designed for people who want to save a few frequently used sites, open the
 
 - Save websites and open them from the list or launcher shortcuts
 - Full-screen website runtime with minimal chrome
-- Per-site options for fullscreen, desktop mode, keep screen on, and external link behavior
+- Per-site options for fullscreen, desktop mode, keep screen on, screen orientation, and external link behavior
 - Site icon fetching from PWA `manifest/icons` with fallback handling
 - File upload, file download, and `blob:` download support
 - Popup and OAuth-friendly WebView behavior

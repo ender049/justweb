@@ -15,6 +15,7 @@
 3. Change keep-screen-on and confirm the page does not sleep while open.
 4. Change desktop mode and confirm desktop/mobile layout changes on a compatible site.
 5. Change external link policy and confirm behavior matches the selected option.
+6. Change screen orientation and confirm follow-system, auto, landscape, and portrait work after reopening.
 
 ## Web Compatibility
 
