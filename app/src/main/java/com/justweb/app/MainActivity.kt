@@ -264,9 +264,12 @@ class MainActivity : AppCompatActivity() {
                         success = shortcutManager.requestPinShortcut(shortcut, null)
                         if (success) {
                             Toast.makeText(this, "已请求添加到桌面", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this, "桌面未接受添加请求，请检查系统快捷方式权限", Toast.LENGTH_SHORT).show()
                         }
                     } catch (e: Exception) {
                         android.util.Log.e("JustWeb", "requestPinShortcut failed", e)
+                        Toast.makeText(this, "添加到桌面失败，请检查系统快捷方式权限", Toast.LENGTH_SHORT).show()
                     }
                 }
             }

@@ -27,8 +27,8 @@ android {
         applicationId = "com.justweb.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 7
-        versionName = "0.1.6"
+        versionCode = 8
+        versionName = "0.1.7"
     }
 
     signingConfigs {
@@ -69,7 +69,7 @@ tasks.register("renameReleaseApk") {
     doLast {
         val releaseDir = file("$projectDir/build/outputs/apk/release")
         val source = releaseDir.resolve("app-release.apk")
-        val target = releaseDir.resolve("justweb-v0.1.6-release.apk")
+        val target = releaseDir.resolve("justweb-v0.1.7-release.apk")
 
         if (source.exists()) {
             if (target.exists()) {

@@ -114,6 +114,21 @@ class WebViewActivity : AppCompatActivity() {
         private const val EXTRA_FORCE_RELOAD = "force_reload"
         private const val KEY_WEBVIEW_STATE = "webview_state"
         private val EMBEDDED_SCHEMES = setOf("about", "data", "file", "javascript")
+        private val EXTENSION_MIME_TYPES = mapOf(
+            "jpg" to "image/jpeg",
+            "jpeg" to "image/jpeg",
+            "png" to "image/png",
+            "gif" to "image/gif",
+            "webp" to "image/webp",
+            "bmp" to "image/bmp",
+            "svg" to "image/svg+xml",
+            "pdf" to "application/pdf",
+            "mp4" to "video/mp4",
+            "webm" to "video/webm",
+            "mov" to "video/quicktime",
+            "mp3" to "audio/mpeg",
+            "wav" to "audio/wav"
+        )
     }
 
     private sealed interface PendingPermissionAction {
@@ -418,33 +433,40 @@ class WebViewActivity : AppCompatActivity() {
         }
     }
 
-    private fun buildFileChooserIntent(fileChooserParams: WebChromeClient.FileChooserParams?): Intent {
-        val acceptTypes = fileChooserParams?.acceptTypes
-            ?.map { it.trim() }
-            ?.filter { it.isNotEmpty() }
+    private fun acceptedMimeTypes(fileChooserParams: WebChromeClient.FileChooserParams?): List<String> {
+        return fileChooserParams?.acceptTypes
+            ?.flatMap { it.split(',') }
+            ?.mapNotNull(::normalizeAcceptType)
             ?.distinct()
             .orEmpty()
-        val type = acceptTypes.singleOrNull() ?: "*/*"
-        val allowMultiple = fileChooserParams?.mode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE
+    }
 
-        return Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            this.type = type
-            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, allowMultiple)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
-            if (acceptTypes.size > 1) {
-                putExtra(Intent.EXTRA_MIME_TYPES, acceptTypes.toTypedArray())
-            }
+    private fun normalizeAcceptType(rawType: String): String? {
+        val value = rawType.trim().lowercase().trimStart('.')
+        if (value.isEmpty()) {
+            return null
         }
+        if (value == "*/*") {
+            return value
+        }
+        if (value.endsWith("/*") && value.substringBefore('/').all { it.isLetterOrDigit() || it == '-' }) {
+            return value
+        }
+        if (value.contains('/')) {
+            val type = value.substringBefore('/')
+            val subtype = value.substringAfter('/')
+            return if (type.isNotBlank() && subtype.isNotBlank()) value else null
+        }
+        return EXTENSION_MIME_TYPES[value]
+    }
+
+    private fun chooserType(acceptTypes: List<String>): String {
+        return acceptTypes.singleOrNull() ?: "*/*"
     }
 
     private fun buildFallbackFileChooserIntent(fileChooserParams: WebChromeClient.FileChooserParams?): Intent {
-        val acceptTypes = fileChooserParams?.acceptTypes
-            ?.map { it.trim() }
-            ?.filter { it.isNotEmpty() }
-            ?.distinct()
-            .orEmpty()
-        val type = acceptTypes.singleOrNull() ?: "*/*"
+        val acceptTypes = acceptedMimeTypes(fileChooserParams)
+        val type = chooserType(acceptTypes)
         val allowMultiple = fileChooserParams?.mode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE
 
         return Intent(Intent.ACTION_GET_CONTENT).apply {
@@ -469,7 +491,13 @@ class WebViewActivity : AppCompatActivity() {
         fileChooserCallback?.onReceiveValue(null)
         fileChooserCallback = filePathCallback
 
-        val chooserIntent = buildFileChooserIntent(fileChooserParams)
+        val chooserIntent = try {
+            (fileChooserParams?.createIntent() ?: buildFallbackFileChooserIntent(fileChooserParams)).apply {
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        } catch (e: Exception) {
+            buildFallbackFileChooserIntent(fileChooserParams)
+        }
 
         return try {
             fileChooserLauncher.launch(chooserIntent)
