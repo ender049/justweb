@@ -2,6 +2,7 @@ package com.justweb.app
 
 import android.app.DownloadManager
 import android.content.ActivityNotFoundException
+import android.content.ClipData
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
@@ -58,7 +59,7 @@ class WebViewActivity : AppCompatActivity() {
     private val fileChooserLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val callback = fileChooserCallback ?: return@registerForActivityResult
         fileChooserCallback = null
-        val uris = WebChromeClient.FileChooserParams.parseResult(result.resultCode, result.data)
+        val uris = parseFileChooserResult(result.resultCode, result.data)
         if (result.resultCode == RESULT_OK) {
             uris?.forEach(::grantFileChooserUriPermission)
         }
@@ -398,6 +399,65 @@ class WebViewActivity : AppCompatActivity() {
         }
     }
 
+    private fun parseFileChooserResult(resultCode: Int, data: Intent?): Array<Uri>? {
+        if (resultCode != RESULT_OK) {
+            return null
+        }
+
+        val uris = linkedSetOf<Uri>()
+        data?.clipData?.let { clipData -> addClipDataUris(clipData, uris) }
+        data?.data?.let(uris::add)
+
+        return uris.takeIf { it.isNotEmpty() }?.toTypedArray()
+            ?: WebChromeClient.FileChooserParams.parseResult(resultCode, data)
+    }
+
+    private fun addClipDataUris(clipData: ClipData, uris: MutableSet<Uri>) {
+        for (index in 0 until clipData.itemCount) {
+            clipData.getItemAt(index)?.uri?.let(uris::add)
+        }
+    }
+
+    private fun buildFileChooserIntent(fileChooserParams: WebChromeClient.FileChooserParams?): Intent {
+        val acceptTypes = fileChooserParams?.acceptTypes
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?.distinct()
+            .orEmpty()
+        val type = acceptTypes.singleOrNull() ?: "*/*"
+        val allowMultiple = fileChooserParams?.mode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE
+
+        return Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            this.type = type
+            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, allowMultiple)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+            if (acceptTypes.size > 1) {
+                putExtra(Intent.EXTRA_MIME_TYPES, acceptTypes.toTypedArray())
+            }
+        }
+    }
+
+    private fun buildFallbackFileChooserIntent(fileChooserParams: WebChromeClient.FileChooserParams?): Intent {
+        val acceptTypes = fileChooserParams?.acceptTypes
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?.distinct()
+            .orEmpty()
+        val type = acceptTypes.singleOrNull() ?: "*/*"
+        val allowMultiple = fileChooserParams?.mode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE
+
+        return Intent(Intent.ACTION_GET_CONTENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            this.type = type
+            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, allowMultiple)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            if (acceptTypes.size > 1) {
+                putExtra(Intent.EXTRA_MIME_TYPES, acceptTypes.toTypedArray())
+            }
+        }
+    }
+
     private fun launchFileChooser(
         filePathCallback: ValueCallback<Array<Uri>>?,
         fileChooserParams: WebChromeClient.FileChooserParams?
@@ -409,28 +469,35 @@ class WebViewActivity : AppCompatActivity() {
         fileChooserCallback?.onReceiveValue(null)
         fileChooserCallback = filePathCallback
 
-        val chooserIntent = try {
-            fileChooserParams?.createIntent() ?: Intent(Intent.ACTION_GET_CONTENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                type = "*/*"
-            }
-        } catch (e: Exception) {
-            fileChooserCallback = null
-            filePathCallback.onReceiveValue(null)
-            Toast.makeText(this, "无法打开文件选择器", Toast.LENGTH_SHORT).show()
-            return true
-        }
-        chooserIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        val chooserIntent = buildFileChooserIntent(fileChooserParams)
 
         return try {
             fileChooserLauncher.launch(chooserIntent)
             true
         } catch (e: ActivityNotFoundException) {
-            fileChooserCallback = null
-            filePathCallback.onReceiveValue(null)
-            Toast.makeText(this, "设备上没有可用的文件选择器", Toast.LENGTH_SHORT).show()
-            true
+            launchFallbackFileChooser(filePathCallback, fileChooserParams)
+        } catch (e: Exception) {
+            cancelFileChooser(filePathCallback, "无法打开文件选择器")
         }
+    }
+
+    private fun launchFallbackFileChooser(
+        filePathCallback: ValueCallback<Array<Uri>>,
+        fileChooserParams: WebChromeClient.FileChooserParams?
+    ): Boolean {
+        return try {
+            fileChooserLauncher.launch(buildFallbackFileChooserIntent(fileChooserParams))
+            true
+        } catch (e: Exception) {
+            cancelFileChooser(filePathCallback, "设备上没有可用的文件选择器")
+        }
+    }
+
+    private fun cancelFileChooser(filePathCallback: ValueCallback<Array<Uri>>, message: String): Boolean {
+        fileChooserCallback = null
+        filePathCallback.onReceiveValue(null)
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+        return true
     }
 
     private fun createPopupWindow(resultMsg: Message?): Boolean {
